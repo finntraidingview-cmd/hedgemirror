@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HedgeMirror</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#07090c;--s1:#0d1217;--s2:#111a21;--border:#1a2630;--green:#059669;--red:#dc2626;--yellow:#d97706;--blue:#0284c7;--text:#ccd9e2;--muted:#4a6272;--mono:'DM Mono',monospace;--sans:'Syne',sans-serif}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+#loginWrap{min-height:100vh;display:flex;align-items:center;justify-content:center}
+.box{background:var(--s1);border:1px solid var(--border);border-radius:20px;padding:44px 40px;width:440px;text-align:center}
+.logo{font-size:28px;font-weight:800;margin-bottom:6px}.logo em{color:var(--green);font-style:normal}
+.sub{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:2px;margin-bottom:28px}
+.field{margin-bottom:12px;text-align:left}
+.field label{display:block;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;font-family:var(--mono)}
+input{width:100%;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;transition:border-color .2s}
+input:focus{border-color:var(--green)}
+.btn{width:100%;padding:14px;background:var(--green);color:#fff;border:none;border-radius:10px;font-family:var(--sans);font-size:15px;font-weight:800;cursor:pointer;transition:all .15s;margin-top:8px}
+.btn:hover{opacity:.9;transform:translateY(-1px)}.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.err{color:var(--red);font-family:var(--mono);font-size:11px;margin-top:10px;min-height:16px}
+#app{display:none;min-height:100vh}
+nav{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(7,9,12,.9);backdrop-filter:blur(12px);z-index:10}
+.nav-logo{font-size:16px;font-weight:800}.nav-logo em{color:var(--green);font-style:normal}
+.tabs{display:flex;gap:4px}
+.tab{padding:7px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:var(--sans);transition:all .15s;background:transparent;color:var(--muted)}
+.tab.on{background:var(--s2);color:var(--text)}
+.nav-r{display:flex;align-items:center;gap:10px}
+.ndot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+.nav-user{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.btn-sm{background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:7px;font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.btn-sm:hover{border-color:var(--green);color:var(--green)}
+.page{display:none;padding:32px}.page.on{display:block}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+.stat{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:18px 22px}
+.stat .val{font-size:26px;font-weight:800;font-family:var(--mono)}
+.stat .lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.sec{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .2s,transform .2s;animation:up .3s ease both}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.card:hover{border-color:#243340;transform:translateY(-2px)}
+.card.funded{border-top:2px solid var(--green)}.card.combine{border-top:2px solid var(--yellow)}.card.eval{border-top:2px solid var(--blue)}.card.off{border-top:2px solid var(--muted);opacity:.55}
+.c-head{padding:16px 18px 12px;display:flex;justify-content:space-between;align-items:flex-start}
+.c-name{font-size:14px;font-weight:700}.c-id{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px}
+.badge{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 9px;border-radius:5px}
+.bfunded{background:rgba(5,150,105,.15);color:#34d399}.bcombine{background:rgba(217,119,6,.15);color:#fbbf24}.beval{background:rgba(2,132,199,.15);color:#38bdf8}.boff{background:rgba(74,98,114,.15);color:var(--muted)}
+.c-body{padding:0 18px 16px}
+.row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.rlabel{font-size:11px;color:var(--muted)}.rval{font-family:var(--mono);font-size:14px;font-weight:500}
+.sep{height:1px;background:var(--border);margin:10px 0}
+.status{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.sdot{width:6px;height:6px;border-radius:50%}
+.empty{text-align:center;padding:80px;color:var(--muted);font-family:var(--mono);font-size:13px;grid-column:1/-1}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="loginWrap">
+  <div class="box">
+    <div class="logo">Hedge<em>Mirror</em></div>
+    <div class="sub">// TOPSTEPX DASHBOARD</div>
+    <div class="field"><label>Username / Email</label><input type="text" id="userName" placeholder="deine@email.com" onkeydown="if(event.key==='Enter')connect()"></div>
+    <div class="field"><label>API Key</label><input type="password" id="apiKey" placeholder="ProjectX API Key" onkeydown="if(event.key==='Enter')connect()"></div>
+    <button class="btn" id="connectBtn" onclick="connect()">Verbinden</button>
+    <div class="err" id="err"></div>
+  </div>
+</div>
+
+<div id="app">
+  <nav>
+    <div class="nav-logo">Hedge<em>Mirror</em></div>
+    <div class="tabs">
+      <button class="tab on" onclick="showTab('accounts',this)">Accounts</button>
+      <button class="tab" onclick="showTab('mirror',this)">Copy Trade</button>
+    </div>
+    <div class="nav-r">
+      <div class="ndot"></div>
+      <span class="nav-user" id="navUser">connected</span>
+      <button class="btn-sm" onclick="loadAccounts()">↻</button>
+      <button class="btn-sm" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+  <div class="page on" id="pg-accounts">
+    <div class="stats">
+      <div class="stat"><div class="val" id="s-total">–</div><div class="lbl">Accounts</div></div>
+      <div class="stat"><div class="val" id="s-active" style="color:var(--green)">–</div><div class="lbl">Aktiv</div></div>
+      <div class="stat"><div class="val" id="s-funded" style="color:var(--green)">–</div><div class="lbl">Funded</div></div>
+      <div class="stat"><div class="val" id="s-combine">–</div><div class="lbl">Combine</div></div>
+    </div>
+    <div class="sec">Alle Accounts</div>
+    <div class="grid" id="grid"><div class="empty"><span class="spin"></span>Lade...</div></div>
+  </div>
+  <div class="page" id="pg-mirror"><div class="empty">🔜 Coming soon</div></div>
+</div>
+
+<script>
+let TOKEN = localStorage.getItem('hm_token') || '';
+let USER = localStorage.getItem('hm_user') || '';
+if (TOKEN) { showApp(); loadAccounts(); }
+
+async function connect() {
+  const userName = document.getElementById('userName').value.trim();
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!userName || !apiKey) { document.getElementById('err').textContent = 'Bitte beide Felder ausfüllen'; return; }
+  const btn = document.getElementById('connectBtn');
+  const err = document.getElementById('err');
+  btn.disabled = true; btn.textContent = 'Verbinde...'; err.textContent = '';
+  try {
+    const r = await fetch('/api/Auth/loginKey', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({userName, apiKey})
+    });
+    const d = await r.json();
+    TOKEN = d.token || d.data?.token;
+    if (!TOKEN) throw new Error(d.errorMessage || 'Login fehlgeschlagen');
+    localStorage.setItem('hm_token', TOKEN);
+    localStorage.setItem('hm_user', userName);
+    USER = userName;
+    showApp(); loadAccounts();
+  } catch(e) {
+    err.textContent = e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Verbinden';
+  }
+}
+
+function showApp() {
+  document.getElementById('loginWrap').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('navUser').textContent = USER;
+}
+
+function logout() {
+  localStorage.removeItem('hm_token'); localStorage.removeItem('hm_user');
+  TOKEN = ''; USER = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginWrap').style.display = 'flex';
+}
+
+function showTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('pg-'+name).classList.add('on');
+}
+
+async function loadAccounts() {
+  document.getElementById('grid').innerHTML = '<div class="empty"><span class="spin"></span>Lade Accounts...</div>';
+  try {
+    const r = await fetch('/api/Account/search', {
+      method: 'POST',
+      headers: {'Authorization': `Bearer ${TOKEN}`, 'Content-Type':'application/json'},
+      body: JSON.stringify({onlyActive: false})
+    });
+    const d = await r.json();
+    if (!d.success) { logout(); return; }
+    render(d.accounts || []);
+  } catch(e) {
+    document.getElementById('grid').innerHTML = `<div class="empty" style="color:var(--red)">Fehler: ${e.message}</div>`;
+  }
+}
+
+function getType(name) {
+  const n = (name||'').toLowerCase();
+  if (/fund|live/.test(n)) return 'funded';
+  if (/eval/.test(n)) return 'eval';
+  return 'combine';
+}
+
+function fmt(v) {
+  if (v == null) return '–';
+  const n = parseFloat(v);
+  return (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('de-DE', {minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function render(accs) {
+  document.getElementById('s-total').textContent  = accs.length;
+  document.getElementById('s-active').textContent = accs.filter(a => a.canTrade).length;
+  document.getElementById('s-funded').textContent = accs.filter(a => getType(a.name)==='funded').length;
+  document.getElementById('s-combine').textContent = accs.filter(a => getType(a.name)==='combine').length;
+  if (!accs.length) { document.getElementById('grid').innerHTML = '<div class="empty">Keine Accounts gefunden</div>'; return; }
+  const B = {funded:['bfunded','Funded'],combine:['bcombine','Combine'],eval:['beval','Evaluation'],off:['boff','Inaktiv']};
+  document.getElementById('grid').innerHTML = accs.map((a,i) => {
+    const t = a.canTrade ? getType(a.name) : 'off';
+    const [bc,bl] = B[t];
+    const bal = a.balance ?? a.currentBalance ?? null;
+    const pnl = a.dailyPnl ?? a.dayPnl ?? null;
+    const pc = pnl==null?'var(--text)':pnl>=0?'var(--green)':'var(--red)';
+    return `<div class="card ${t}" style="animation-delay:${i*.05}s">
+      <div class="c-head">
+        <div><div class="c-name">${a.name||'Account'}</div><div class="c-id">ID: ${a.id}</div></div>
+        <span class="badge ${bc}">${bl}</span>
+      </div>
+      <div class="c-body">
+        <div class="row"><span class="rlabel">Balance</span><span class="rval">${fmt(bal)}</span></div>
+        <div class="row"><span class="rlabel">Daily P&L</span><span class="rval" style="color:${pc}">${fmt(pnl)}</span></div>
+        <div class="sep"></div>
+        <div class="status"><div class="sdot" style="background:${a.canTrade?'var(--green)':'var(--muted)'}"></div>${a.canTrade?'Kann traden':'Kein Trading'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
