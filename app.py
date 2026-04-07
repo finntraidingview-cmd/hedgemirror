@@ -139,23 +139,19 @@ def run_mirror(pair_id):
             positions = d.get("positions", d.get("data", []))
             current = {str(p.get("id", p.get("positionId", ""))): p for p in positions}
 
-            # Neue Positionen → Hedge öffnen
             for pid, pos in current.items():
                 if pid not in known_positions:
                     raw_side = pos.get("side", pos.get("action", ""))
-                    log_msg(pair_id, f"RAW side value: {repr(raw_side)} | full pos keys: {list(pos.keys())}")
-                    if raw_side in (0, "0", "Buy", "buy", "BUY", "Long", "long", "B"):
+                    raw_type = pos.get("type", 0)
+                    # TopstepX: type 1 = Long/Buy, type 2 = Short/Sell
+                    if raw_type == 1 or raw_side in ("Buy", "buy", "BUY", "Long", 0, "0"):
                         side = "Buy"
-                    elif raw_side in (1, "1", "Sell", "sell", "SELL", "Short", "short", "S"):
-                        side = "Sell"
                     else:
-                        # Fallback: log alles
-                        log_msg(pair_id, f"⚠️ Unbekannte side: {repr(raw_side)}, ganzer pos: {pos}")
-                        side = "Buy"  # default
+                        side = "Sell"
                     contract = pos.get("contractId", "")
                     qty = int(pos.get("size", pos.get("quantity", 1)))
                     tsx_risk = float(pos.get("initialRisk", pos.get("risk", 0)) or 0)
-                    log_msg(pair_id, f"🆕 Neue Position: TSX={side} {qty}x {contract} | risk=${tsx_risk}")
+                    log_msg(pair_id, f"🆕 Neue Position: TSX={side} (type={raw_type}) {qty}x {contract}")
                     open_hedge(pair_id, pid, side, contract, qty, tsx_risk)
 
             # Geschlossene Positionen → Hedge schließen
@@ -198,8 +194,8 @@ def open_hedge(pair_id, order_id, side, contract, qty, tsx_risk_usd=0):
 
     lots = max(0.01, lots)
 
-    # Invertierte Richtung: TSX Buy → MT5 Sell, TSX Sell → MT5 Buy
-    mt_side = "ORDER_TYPE_SELL" if side == "Buy" else "ORDER_TYPE_BUY"
+    # TSX Buy → MT5 SELL, TSX Sell → MT5 BUY (immer gegenteil)
+    mt_side = "ORDER_TYPE_SELL" if side in (0, "0", "Buy", "buy", "BUY", "Long", "long", "B") else "ORDER_TYPE_BUY"
 
     body = {"symbol": mt_symbol, "volume": lots, "actionType": mt_side, "comment": f"HM-{str(order_id)[:8]}"}
     try:
