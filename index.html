@@ -540,7 +540,7 @@ function showApp() {
   document.getElementById('loginWrap').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('navUser').textContent=USER;
-  renderMtAccounts(); loadMirrorPairs();
+  renderMtAccounts();
 }
 
 function logout() {
@@ -569,7 +569,7 @@ async function loadAccounts() {
       return a.canTrade===true;
     });
     if (allAccounts.length) console.log('Account Felder:',Object.keys(allAccounts[0]),allAccounts[0]);
-    updateStats(); applyFilters(); populateTradeAccounts();
+    updateStats(); applyFilters(); populateTradeAccounts(); loadMirrorPairs();
   } catch(e) {
     document.getElementById('grid').innerHTML=`<div class="loading" style="color:var(--red)">Fehler: ${e.message}</div>`;
   }
