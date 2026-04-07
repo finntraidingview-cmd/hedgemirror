@@ -142,16 +142,20 @@ def run_mirror(pair_id):
             # Neue Positionen → Hedge öffnen
             for pid, pos in current.items():
                 if pid not in known_positions:
-                    # Side fix: TopstepX gibt 0=Buy, 1=Sell oder "Buy"/"Sell"
                     raw_side = pos.get("side", pos.get("action", ""))
-                    if raw_side in (0, "0", "Buy", "buy", "BUY", "Long", "long"):
+                    log_msg(pair_id, f"RAW side value: {repr(raw_side)} | full pos keys: {list(pos.keys())}")
+                    if raw_side in (0, "0", "Buy", "buy", "BUY", "Long", "long", "B"):
                         side = "Buy"
-                    else:
+                    elif raw_side in (1, "1", "Sell", "sell", "SELL", "Short", "short", "S"):
                         side = "Sell"
+                    else:
+                        # Fallback: log alles
+                        log_msg(pair_id, f"⚠️ Unbekannte side: {repr(raw_side)}, ganzer pos: {pos}")
+                        side = "Buy"  # default
                     contract = pos.get("contractId", "")
                     qty = int(pos.get("size", pos.get("quantity", 1)))
                     tsx_risk = float(pos.get("initialRisk", pos.get("risk", 0)) or 0)
-                    log_msg(pair_id, f"🆕 Neue Position: {side} {qty}x {contract} | risk=${tsx_risk}")
+                    log_msg(pair_id, f"🆕 Neue Position: TSX={side} {qty}x {contract} | risk=${tsx_risk}")
                     open_hedge(pair_id, pid, side, contract, qty, tsx_risk)
 
             # Geschlossene Positionen → Hedge schließen
