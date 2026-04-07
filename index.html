@@ -848,9 +848,6 @@ function addMirrorPair() {
   saveMirrorPairs(); renderMirrorPairs();
 }
 
-function saveMirrorPairs() {
-  localStorage.setItem('mirror_pairs',JSON.stringify(mirrorPairs));
-}
 
 function deleteMirrorPair(id) {
   if (!confirm('Pair löschen?')) return;
