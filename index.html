@@ -868,7 +868,8 @@ function renderMirrorPairs() {
   container.innerHTML=mirrorPairs.map(pair=>{
     const tsx=allAccounts.find(a=>String(a.id)===String(pair.tsxAccountId));
     const mt=mtAccounts.find(m=>String(m.id)===String(pair.mtAccountId));
-    const ready=tsx&&mt;
+    const ready=(tsx&&mt)||(pair.tsxAccountId&&pair.mtAccountId);
+    const infoText = tsx&&mt ? `${tsx.name.slice(0,15)}... → ${mt.name}` : `ID:${String(pair.tsxAccountId).slice(0,8)}... → ${mt?.name||'MT5'}`;
     const mult=pair.multiplier||1;
     return `
     <div class="mirror-card ${pair.active?'active':''}">
@@ -876,7 +877,7 @@ function renderMirrorPairs() {
         <div class="mirror-status">
           <div class="mirror-dot ${pair.active?'on':'off'}"></div>
           <span class="mirror-label">${pair.active?'Aktiv':'Inaktiv'}</span>
-          ${ready?`<span class="mirror-info">${tsx.name.slice(0,12)}... → ${mt.name}</span>`:'<span style="font-size:11px;color:var(--yellow)">⚠ Accounts wählen</span>'}
+          ${ready?`<span class="mirror-info">${infoText}</span>`:'<span style="font-size:11px;color:var(--yellow)">⚠ Accounts wählen</span>'}
         </div>
         <div class="mirror-actions">
           ${ready?`<button class="${pair.active?'btn-stop':'btn-start'}" onclick="${pair.active?`stopMirror(${pair.id})`:`startMirror(${pair.id})`}">
@@ -931,7 +932,8 @@ function renderMirrorPairs() {
 async function startMirror(pairId) {
   const pair=mirrorPairs.find(p=>p.id===pairId);
   const mt=mtAccounts.find(m=>String(m.id)===String(pair.mtAccountId));
-  if (!pair||!mt) return;
+  if (!pair||!mt) { alert('MT5 Account nicht gefunden'); return; }
+  if (!pair.tsxAccountId) { alert('TopstepX Account wählen'); return; }
   const body={pairId:String(pairId),tsxToken:TOKEN,tsxAccountId:pair.tsxAccountId,maToken:mt.matoken,maAccountId:mt.maaccid,multiplier:pair.multiplier||1.0,targetRiskEur:pair.targetRiskEur||0,symbolMap:{"MNQ":"NAS100","NQ":"NAS100","ES":"US500","MES":"US500","YM":"US30","MYM":"US30","CL":"OIL","GC":"XAUUSD"}};
   const r=await fetch('/mirror/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const d=await r.json();
