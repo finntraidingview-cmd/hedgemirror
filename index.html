@@ -850,13 +850,23 @@ function renderMirrorPairs() {
           </div>
         </div>
         <div class="mirror-mult-row">
-          <span class="mirror-mult-label">Multiplikator</span>
-          <input class="mirror-mult-input" type="number" value="${mult}" min="0.01" step="0.1"
-            onchange="updateMirrorPair(${pair.id},'multiplier',parseFloat(this.value))">
-          <span class="mirror-mult-hint">Lots NAS100 pro MNQ</span>
+          <div style="display:flex;flex-direction:column;gap:10px;flex:1">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="mirror-mult-label" style="width:130px">Multiplikator</span>
+              <input class="mirror-mult-input" type="number" value="${mult}" min="0.01" step="0.1" style="width:70px"
+                onchange="updateMirrorPair(${pair.id},'multiplier',parseFloat(this.value))">
+              <span class="mirror-mult-hint">Lots pro MNQ (Fallback)</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="mirror-mult-label" style="width:130px">Ziel Risiko (€)</span>
+              <input class="mirror-mult-input" type="number" value="${pair.targetRiskEur||0}" min="0" step="10" style="width:70px"
+                onchange="updateMirrorPair(${pair.id},'targetRiskEur',parseFloat(this.value))">
+              <span class="mirror-mult-hint">€ → auto Lot Berechnung</span>
+            </div>
+          </div>
           <div class="mirror-example">
-            <div class="el">6 MNQ →</div>
-            <div class="ev">${(6*mult).toFixed(1)} Lots</div>
+            <div class="el">10 MNQ / $950 →</div>
+            <div class="ev">${pair.targetRiskEur>0?((pair.targetRiskEur/950)*10*2.33).toFixed(1):(10*mult).toFixed(1)} Lots</div>
           </div>
         </div>
         ${pair.active?`<div class="mirror-log" id="mirror-log-${pair.id}">Warte auf Trades...</div>`:''}
@@ -869,7 +879,7 @@ async function startMirror(pairId) {
   const pair=mirrorPairs.find(p=>p.id===pairId);
   const mt=mtAccounts.find(m=>String(m.id)===String(pair.mtAccountId));
   if (!pair||!mt) return;
-  const body={pairId:String(pairId),tsxToken:TOKEN,tsxAccountId:pair.tsxAccountId,maToken:mt.matoken,maAccountId:mt.maaccid,multiplier:pair.multiplier||1.0,symbolMap:{"MNQ":"NAS100","NQ":"NAS100","ES":"US500","MES":"US500","YM":"US30","MYM":"US30","CL":"OIL","GC":"XAUUSD"}};
+  const body={pairId:String(pairId),tsxToken:TOKEN,tsxAccountId:pair.tsxAccountId,maToken:mt.matoken,maAccountId:mt.maaccid,multiplier:pair.multiplier||1.0,targetRiskEur:pair.targetRiskEur||0,symbolMap:{"MNQ":"NAS100","NQ":"NAS100","ES":"US500","MES":"US500","YM":"US30","MYM":"US30","CL":"OIL","GC":"XAUUSD"}};
   const r=await fetch('/mirror/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const d=await r.json();
   if (d.ok) { updateMirrorPair(pairId,'active',true); pollMirrorStatus(pairId); }

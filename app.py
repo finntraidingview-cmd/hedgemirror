@@ -83,6 +83,7 @@ def mirror_start():
         "maToken": ma_token,
         "maAccountId": ma_acc_id,
         "multiplier": multiplier,
+        "targetRiskEur": float(data.get("targetRiskEur", 0)),
         "symbolMap": symbol_map,
         "active": True,
         "positions": {},
@@ -112,19 +113,18 @@ def mirror_status():
         result[pid] = {"active": s["active"], "log": s["log"][-20:], "positions": s["positions"]}
     return jsonify(result)
 
-# ── Mirror Logic ──
 # ── Mirror Logic (Polling) ──
 def run_mirror(pair_id):
     s = mirror_sessions.get(pair_id)
     if not s: return
 
-    log_msg(pair_id, "Mirror gestartet (Polling alle 2s)")
+    log_msg(pair_id, "Mirror gestartet (Polling 0.5s → 1s)")
 
-    known_positions = {}  # positionId -> position data
+    known_positions = {}
+    start_time = time.time()
 
     while mirror_sessions.get(pair_id, {}).get("active"):
         try:
-            # Poll open positions
             r = requests.post(f"{TSX_BASE}/api/Position/searchOpen",
                 headers={"Authorization": f"Bearer {s['tsxToken']}", "Content-Type": "application/json"},
                 json={"accountId": int(s["tsxAccountId"])},
@@ -139,16 +139,22 @@ def run_mirror(pair_id):
             positions = d.get("positions", d.get("data", []))
             current = {str(p.get("id", p.get("positionId", ""))): p for p in positions}
 
-            # New positions → open hedge
+            # Neue Positionen → Hedge öffnen
             for pid, pos in current.items():
                 if pid not in known_positions:
-                    side     = pos.get("side", pos.get("action", ""))
+                    # Side fix: TopstepX gibt 0=Buy, 1=Sell oder "Buy"/"Sell"
+                    raw_side = pos.get("side", pos.get("action", ""))
+                    if raw_side in (0, "0", "Buy", "buy", "BUY", "Long", "long"):
+                        side = "Buy"
+                    else:
+                        side = "Sell"
                     contract = pos.get("contractId", "")
-                    qty      = int(pos.get("size", pos.get("quantity", 1)))
-                    log_msg(pair_id, f"🆕 Neue Position: {side} {qty}x {contract}")
-                    open_hedge(pair_id, pid, side, contract, qty)
+                    qty = int(pos.get("size", pos.get("quantity", 1)))
+                    tsx_risk = float(pos.get("initialRisk", pos.get("risk", 0)) or 0)
+                    log_msg(pair_id, f"🆕 Neue Position: {side} {qty}x {contract} | risk=${tsx_risk}")
+                    open_hedge(pair_id, pid, side, contract, qty, tsx_risk)
 
-            # Closed positions → close hedge
+            # Geschlossene Positionen → Hedge schließen
             for pid in list(known_positions.keys()):
                 if pid not in current:
                     log_msg(pair_id, f"❌ Position geschlossen: {pid}")
@@ -159,23 +165,39 @@ def run_mirror(pair_id):
         except Exception as e:
             log_msg(pair_id, f"Poll exception: {e}")
 
-        time.sleep(2)
+        # 0.5s die ersten 2 Minuten, dann 1s
+        elapsed = time.time() - start_time
+        time.sleep(0.5 if elapsed < 120 else 1.0)
 
     log_msg(pair_id, "Mirror gestoppt")
 
-def open_hedge(pair_id, order_id, side, contract, qty):
+def open_hedge(pair_id, order_id, side, contract, qty, tsx_risk_usd=0):
     s = mirror_sessions.get(pair_id)
     if not s: return
 
-    # Map symbol
-    base = contract.split(".")[2] if "." in contract else contract[:3]
+    # Symbol mapping
+    parts = contract.split(".")
+    base = parts[3] if len(parts) > 3 else (parts[2] if len(parts) > 2 else contract[:3])
     mt_symbol = s["symbolMap"].get(base, "NAS100")
 
-    # Inverted side
-    mt_side = "ORDER_TYPE_BUY" if side == "Sell" else "ORDER_TYPE_SELL"
-    lots = round(qty * s["multiplier"], 2)
+    # Lot Berechnung
+    target_eur = float(s.get("targetRiskEur", 0))
+    multiplier = float(s.get("multiplier", 1.0))
 
-    body = {"symbol": mt_symbol, "volume": lots, "actionType": mt_side, "comment": f"HM-{order_id[:8]}"}
+    if target_eur > 0 and tsx_risk_usd > 0:
+        # Formel: Lots = (€ Ziel / $ Risiko) × MNQ Contracts × 2.33
+        lots = round((target_eur / tsx_risk_usd) * qty * 2.33, 2)
+        log_msg(pair_id, f"Lot Berechnung: ({target_eur}€ / ${tsx_risk_usd}) × {qty} × 2.33 = {lots}")
+    else:
+        # Fallback: fester Multiplikator
+        lots = round(qty * multiplier, 2)
+
+    lots = max(0.01, lots)
+
+    # Invertierte Richtung: TSX Buy → MT5 Sell, TSX Sell → MT5 Buy
+    mt_side = "ORDER_TYPE_SELL" if side == "Buy" else "ORDER_TYPE_BUY"
+
+    body = {"symbol": mt_symbol, "volume": lots, "actionType": mt_side, "comment": f"HM-{str(order_id)[:8]}"}
     try:
         r = requests.post(
             f"{MA_BASE}/users/current/accounts/{s['maAccountId']}/trade",
@@ -187,7 +209,7 @@ def open_hedge(pair_id, order_id, side, contract, qty):
             s["positions"][order_id] = pos_id
             log_msg(pair_id, f"✅ Hedge OPEN: {mt_side.split('_')[-1]} {lots}x {mt_symbol} | pos={pos_id}")
         else:
-            log_msg(pair_id, f"❌ Open failed: {r.status_code} {r.text[:100]}")
+            log_msg(pair_id, f"❌ Open failed: {r.status_code} {r.text[:150]}")
     except Exception as e:
         log_msg(pair_id, f"❌ Open error: {e}")
 
