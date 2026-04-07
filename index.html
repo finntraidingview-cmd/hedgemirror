@@ -851,12 +851,12 @@ function addMirrorPair() {
 
 function deleteMirrorPair(id) {
   if (!confirm('Pair löschen?')) return;
-  mirrorPairs=mirrorPairs.filter(p=>p.id!==id);
+  mirrorPairs=mirrorPairs.filter(p=>String(p.id)!==String(id));
   saveMirrorPairs(); renderMirrorPairs();
 }
 
 function updateMirrorPair(id,key,value) {
-  mirrorPairs=mirrorPairs.map(p=>p.id===id?{...p,[key]:value}:p);
+  mirrorPairs=mirrorPairs.map(p=>String(p.id)===String(id)?{...p,[key]:value}:p);
   saveMirrorPairs(); renderMirrorPairs();
 }
 
@@ -883,21 +883,21 @@ function renderMirrorPairs() {
           ${ready?`<button class="${pair.active?'btn-stop':'btn-start'}" onclick="${pair.active?`stopMirror(${pair.id})`:`startMirror(${pair.id})`}">
             ${pair.active?'⏹ Stoppen':'▶ Starten'}
           </button>`:''}
-          <button class="btn-del" onclick="deleteMirrorPair(${pair.id})">✕</button>
+          <button class="btn-del" onclick="deleteMirrorPair('${pair.id}')">✕</button>
         </div>
       </div>
       <div class="mirror-body">
         <div class="mirror-selects">
           <div>
             <div class="mirror-sel-label" style="color:var(--yellow)">Master – TopstepX</div>
-            <select class="mirror-select" onchange="updateMirrorPair(${pair.id},'tsxAccountId',this.value)">
+            <select class="mirror-select" onchange="updateMirrorPair('${pair.id}','tsxAccountId',this.value)">
               <option value="">– Account wählen –</option>
               ${tsxOpts.replace(`value="${pair.tsxAccountId}"`,`value="${pair.tsxAccountId}" selected`)}
             </select>
           </div>
           <div>
             <div class="mirror-sel-label" style="color:var(--blue)">Slave – MT5</div>
-            <select class="mirror-select" onchange="updateMirrorPair(${pair.id},'mtAccountId',this.value)">
+            <select class="mirror-select" onchange="updateMirrorPair('${pair.id}','mtAccountId',this.value)">
               <option value="">– Account wählen –</option>
               ${mtOpts.replace(`value="${pair.mtAccountId}"`,`value="${pair.mtAccountId}" selected`)}
             </select>
@@ -930,8 +930,8 @@ function renderMirrorPairs() {
 }
 
 async function startMirror(pairId) {
-  const pair=mirrorPairs.find(p=>p.id===pairId);
-  const mt=mtAccounts.find(m=>String(m.id)===String(pair.mtAccountId));
+  const pair=mirrorPairs.find(p=>String(p.id)===String(pairId));
+  const mt=mtAccounts.find(m=>String(m.id)===String(pair?.mtAccountId));
   if (!pair||!mt) { alert('MT5 Account nicht gefunden'); return; }
   if (!pair.tsxAccountId) { alert('TopstepX Account wählen'); return; }
   const body={pairId:String(pairId),tsxToken:TOKEN,tsxAccountId:pair.tsxAccountId,maToken:mt.matoken,maAccountId:mt.maaccid,multiplier:pair.multiplier||1.0,targetRiskEur:pair.targetRiskEur||0,symbolMap:{"MNQ":"NAS100","NQ":"NAS100","ES":"US500","MES":"US500","YM":"US30","MYM":"US30","CL":"OIL","GC":"XAUUSD"}};
@@ -947,7 +947,7 @@ async function stopMirror(pairId) {
 
 function pollMirrorStatus(pairId) {
   const iv=setInterval(async()=>{
-    const pair=mirrorPairs.find(p=>p.id===pairId);
+    const pair=mirrorPairs.find(p=>String(p.id)===String(pairId));
     if (!pair||!pair.active) { clearInterval(iv); return; }
     const r=await fetch('/mirror/status');
     const d=await r.json();
