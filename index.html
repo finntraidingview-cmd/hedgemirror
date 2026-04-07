@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HedgeMirror</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -453,7 +454,62 @@ let USER  = localStorage.getItem('hm_user') || '';
 let allAccounts = [];
 let currentFilter = 'active';
 let mtAccounts = JSON.parse(localStorage.getItem('mt_accounts') || '[]');
-let mirrorPairs = JSON.parse(localStorage.getItem('mirror_pairs') || '[]');
+let mirrorPairs = [];
+
+// ── SUPABASE für Mirror Pairs ──
+const SUPA_URL = 'https://wbabbimvchexbyfcyxne.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndiYWJiaW12Y2hleGJ5ZmN5eG5lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3OTI3MTYsImV4cCI6MjA5MDM2ODcxNn0.Fw0bnshVIJKzwZDZmJ-wW169LpNqZEvdo2Kd8q7EvOc';
+
+async function supaFetch(method, path, body) {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
+    method,
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'return=representation' : 'return=representation'
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (r.status === 204) return [];
+  return r.json();
+}
+
+async function loadMirrorPairs() {
+  try {
+    const data = await supaFetch('GET', `mirror_pairs?user_key=eq.${encodeURIComponent(USER)}&order=created_at.asc`);
+    if (Array.isArray(data)) {
+      mirrorPairs = data.map(d => ({
+        id: d.pair_id,
+        tsxAccountId: d.tsx_account_id || '',
+        mtAccountId: d.mt_account_id || '',
+        multiplier: d.multiplier || 1.0,
+        targetRiskEur: d.target_risk_eur || 0,
+        active: false // active ist immer lokal
+      }));
+      renderMirrorPairs();
+    }
+  } catch(e) { console.error('loadMirrorPairs:', e); }
+}
+
+async function saveMirrorPairs() {
+  // Lokal speichern für schnelle UI
+  localStorage.setItem('mirror_pairs', JSON.stringify(mirrorPairs));
+  // Supabase sync
+  try {
+    await supaFetch('DELETE', `mirror_pairs?user_key=eq.${encodeURIComponent(USER)}`);
+    if (mirrorPairs.length) {
+      await supaFetch('POST', 'mirror_pairs', mirrorPairs.map(p => ({
+        pair_id: String(p.id),
+        user_key: USER,
+        tsx_account_id: p.tsxAccountId,
+        mt_account_id: p.mtAccountId,
+        multiplier: p.multiplier || 1.0,
+        target_risk_eur: p.targetRiskEur || 0
+      })));
+    }
+  } catch(e) { console.error('saveMirrorPairs:', e); }
+}
 
 if (TOKEN) { showApp(); loadAccounts(); }
 
@@ -484,7 +540,7 @@ function showApp() {
   document.getElementById('loginWrap').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('navUser').textContent=USER;
-  renderMtAccounts(); renderMirrorPairs();
+  renderMtAccounts(); loadMirrorPairs();
 }
 
 function logout() {
