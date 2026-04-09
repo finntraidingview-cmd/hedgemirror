@@ -84,6 +84,7 @@ def mirror_start():
         "maAccountId": ma_acc_id,
         "multiplier": multiplier,
         "targetRiskEur": float(data.get("targetRiskEur", 0)),
+        "pollInterval": float(data.get("pollInterval", 0.5)),
         "symbolMap": symbol_map,
         "active": True,
         "positions": {},
@@ -165,9 +166,8 @@ def run_mirror(pair_id):
         except Exception as e:
             log_msg(pair_id, f"Poll exception: {e}")
 
-        # 0.5s die ersten 2 Minuten, dann 1s
-        elapsed = time.time() - start_time
-        time.sleep(0.5 if elapsed < 120 else 1.0)
+        interval = s.get("pollInterval", 0.5)
+        time.sleep(interval)
 
     log_msg(pair_id, "Mirror gestoppt")
 

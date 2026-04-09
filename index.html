@@ -917,6 +917,18 @@ function renderMirrorPairs() {
                 onchange="updateMirrorPair(${pair.id},'targetRiskEur',parseFloat(this.value))">
               <span class="mirror-mult-hint">€ → auto Lot Berechnung</span>
             </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="mirror-mult-label" style="width:130px">Polling Interval</span>
+              <select style="padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:var(--mono);font-size:12px;outline:none;cursor:pointer"
+                onchange="updateMirrorPair('${pair.id}','pollInterval',parseFloat(this.value))">
+                <option value="0.2" ${(pair.pollInterval||0.5)==0.2?'selected':''}>0.2s – High Speed</option>
+                <option value="0.5" ${(pair.pollInterval||0.5)==0.5?'selected':''}>0.5s – Standard</option>
+                <option value="1" ${(pair.pollInterval||0.5)==1?'selected':''}>1s – Normal</option>
+                <option value="2" ${(pair.pollInterval||0.5)==2?'selected':''}>2s – Low</option>
+                <option value="5" ${(pair.pollInterval||0.5)==5?'selected':''}>5s – Overnight</option>
+              </select>
+              <span class="mirror-mult-hint">wie schnell Positionen gecheckt werden</span>
+            </div>
           </div>
           <div class="mirror-example">
             <div class="el">10 MNQ / $950 →</div>
@@ -934,7 +946,7 @@ async function startMirror(pairId) {
   const mt=mtAccounts.find(m=>String(m.id)===String(pair?.mtAccountId));
   if (!pair||!mt) { alert('MT5 Account nicht gefunden'); return; }
   if (!pair.tsxAccountId) { alert('TopstepX Account wählen'); return; }
-  const body={pairId:String(pairId),tsxToken:TOKEN,tsxAccountId:pair.tsxAccountId,maToken:mt.matoken,maAccountId:mt.maaccid,multiplier:pair.multiplier||1.0,targetRiskEur:pair.targetRiskEur||0,symbolMap:{"MNQ":"NAS100","NQ":"NAS100","ES":"US500","MES":"US500","YM":"US30","MYM":"US30","CL":"OIL","GC":"XAUUSD"}};
+  const body={pairId:String(pairId),tsxToken:TOKEN,tsxAccountId:pair.tsxAccountId,maToken:mt.matoken,maAccountId:mt.maaccid,multiplier:pair.multiplier||1.0,targetRiskEur:pair.targetRiskEur||0,pollInterval:pair.pollInterval||0.5,symbolMap:{"MNQ":"NAS100","NQ":"NAS100","ES":"US500","MES":"US500","YM":"US30","MYM":"US30","CL":"OIL","GC":"XAUUSD"}};
   const r=await fetch('/mirror/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const d=await r.json();
   if (d.ok) { updateMirrorPair(pairId,'active',true); pollMirrorStatus(pairId); }
