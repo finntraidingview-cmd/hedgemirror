@@ -119,7 +119,7 @@ def run_mirror(pair_id):
     s = mirror_sessions.get(pair_id)
     if not s: return
 
-    log_msg(pair_id, "Mirror gestartet (Polling 0.5s → 1s)")
+    log_msg(pair_id, f"Mirror gestartet (Polling {s.get('pollInterval', 0.5)}s)")
 
     known_positions = {}
     start_time = time.time()
