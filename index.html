@@ -485,6 +485,7 @@ async function loadMirrorPairs() {
         mtAccountId: d.mt_account_id || '',
         multiplier: d.multiplier || 1.0,
         targetRiskEur: d.target_risk_eur || 0,
+        pollInterval: d.poll_interval || 0.5,
         active: false // active ist immer lokal
       }));
       renderMirrorPairs();
@@ -505,7 +506,8 @@ async function saveMirrorPairs() {
         tsx_account_id: p.tsxAccountId,
         mt_account_id: p.mtAccountId,
         multiplier: p.multiplier || 1.0,
-        target_risk_eur: p.targetRiskEur || 0
+        target_risk_eur: p.targetRiskEur || 0,
+        poll_interval: p.pollInterval || 0.5
       })));
     }
   } catch(e) { console.error('saveMirrorPairs:', e); }
